@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <title>クロスワードパズル編集</title>
+  <base target="_top">
+  <meta charset="UTF-8">
+</head>
+
+<body>
+<div id="app">
+  <h1>クロスワード作成/編集</h1>
+
+  <!-- 基本情報編集エリア -->
+  <div>
+    <h4>タイトル</h4>
+    <input type="text">
+  </div>
+
+  <!-- マス編集エリア -->
+  <div class="edit-area">
+    <!-- 行追加/削除ボタン -->
+    <div class="mass-edit-group">
+      <h4>行追加/削除</h4>
+      <button type="button" @click="addRow()">＋</button>
+      <button type="button" @click="delRow()">ー</button>
+    </div>
+
+    <!-- 列追加/削除ボタン -->
+    <div class="mass-edit-group">
+      <h4>列追加/削除</h4>
+      <button type="button" @click="addColumn()">＋</button>
+      <button type="button" @click="delColumn()">ー</button>
+    </div>
+
+    <!-- 黒マスボタン -->
+    <div class="mass-edit-group">
+      <button type="button" @click="switchMassType()">黒マス</button>
+    </div>
+
+    <!-- パズル -->
+    <div class="puzzle-edit-area">
+      <table class="cw">
+        <tbody>
+          <tr v-for="(pzlRow, rowNo) in puzzle">
+            <td v-for="(pzlMass, colNo) in pzlRow" 
+            :class="getPzlMassClsAttr(pzlMass, rowNo, colNo)">
+            <div @click="changeActiveMass(rowNo, colNo)">
+              <div :class="['puzzle-mass-inner', isNotEmpty(pzlMass.keyWordId) ? 'key-word-mass-inner' : '']">
+                <div class="clue-no">
+                  {{ pzlMass.clueNo }}
+                </div>
+                <div class="input-char">
+                  {{ pzlMass.value }}
+                </div>
+                <div class="key-word-id">
+                  {{pzlMass.keyWordId}}
+                </div>
+              </div>
+              <d/div>
+            </td>
+          </tr>  
+        </tbody>
+      </table> 
+    </div>
+  </div>
+
+  <!-- アイウエオ表 -->
+   <div class="edit-area">
+    <details>
+      <summary>五十音表</summary>
+      <table v-for="aiueoTable in aiueoTableList" class="aiueo">
+        <tbody>
+          <tr v-for="aiueoRow in aiueoTable">
+            <td v-for="aiueoMass in aiueoRow" :class="aiueoMass.type" @click="aiueoMass.type == 'aiueo-mass' ? setActiveMassValue(aiueoMass.value) : null">
+              {{ aiueoMass.value }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
+  </div>
+
+    <!-- カギ編集エリア -->
+    <div class="edit-area">
+      <details>
+        <summary>カギ編集</summary>
+        <!-- カギ編集ボタンエリア -->
+        <div class="clue-edit-btn-area">
+          <button type="button" @click="">クリア</button>
+          <button type="button" @click="">全クリア</button>
+        </div>
+        <!-- カギ一覧エリア -->
+        <div class="clue-area">
+          <div v-for="clue in getClueList()" :class="getClueBlockClsAttr(clue.type, clue.clueNo)" @click="changeActiveClue(clue.type, clue.clueNo)">
+            <div class="clue-type-no"><b>{{clue.typeName}} {{clue.clueNo}}</b></div>
+            <div class="clue-text-area">
+              <textarea class="clue-textarea">{{clue.text}}</textarea>
+            </div>
+          </div>
+        </div>
+        <!-- 解答エリア -->
+        <div class="answer-area">
+          <table>
+            <tr>
+              <td class="puzzle-mass">
+                <div class="puzzle-mass-inner key-word-mass-inner">
+                  <div class="clue-no">
+                    
+                  </div>
+                  <div class="input-char">
+                    ア
+                  </div>
+                  <div class="key-word-id">
+                    A
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </details>
+    </div>
+
+</div>
+</body>
+
+<style type="text/css">
+/*** 編集エリア ************************************************************/
+.edit-area{
+  display: inline-block;
+  vertical-align: top;
+  padding: 10px;
+}
+
+/*** パズル編集ボタン群 *****************************************************/
+.mass-edit-group{
+  display: inline-block;
+  padding: 10px;
+}
+
+table.cw{
+    border-collapse: collapse;
+    
+    color: rgb(25, 25, 25);
+    margin-bottom: 50px;
+}
+
+/*** パズル表 *************************************************************/
+.puzzle-mass{
+  border: 2px solid rgb(140, 140, 140);
+  height: 60px;
+  width: 60px;
+}
+
+.puzzle-mass:hover{
+  cursor: pointer;
+}
+
+.input-mass{
+    background-color: white;
+}
+
+.active-line{
+    background-color: rgb(181, 254, 255);
+}
+
+.active-mass{
+    background-color: rgb(57, 149, 255);
+    outline: 5px solid rgb(57, 149, 255);
+    outline-offset: -5px;
+}
+
+.filled-mass{
+    background-color: black;
+}
+
+.puzzle-mass-inner{
+  margin: 2px;
+  border: 2px dashed rgba(1, 1, 1, 0);
+}
+
+.key-word-mass-inner{
+  border: 2px dashed rgb(96, 122, 135);
+}
+
+.clue-no{
+    height: 15px;
+    width: 60px;
+    font-size: 1em;
+    text-align: left;
+    padding-left: 3px;
+    color: rgb(50, 50, 50);
+}
+
+.input-char{
+    position: relative;
+    top: -5px;
+    font-size: 2.1em;
+    text-align: center;
+    height: 30px;
+    width: 60px;
+    color: rgb(25, 25, 25);
+}
+
+.key-word-id{
+  height: 15px;
+  width: 60px;
+  font-size: 1em;
+  text-align: right;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  color: rgb(96, 122, 135);
+}
+
+/*** 五十音表 *************************************************************/
+table.aiueo{
+    font-size: 1.5em;
+    color: rgb(75, 75, 75);
+    margin-bottom: 20px;
+}
+
+.aiueo-mass{
+    border-radius: 5px;
+    padding: 5px;
+    height: 30px;
+    width: 30px;
+    background-color: rgb(214, 255, 238);
+    text-align: center;
+}
+
+.aiueo-mass:hover{
+  cursor: pointer;
+  background-color: rgb(24, 188, 120);
+}
+
+.space-mass{
+    background-color: rgba(0,0,0,0);
+}
+
+/*** カギ編集 *************************************************************/
+.clue-edit-btn-area{
+  padding: 20px;
+}
+
+.clue-area{
+  height: 510px;
+  width: 410px;
+  outline: 1px solid rgb(80, 80, 80);
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-width: 100px;
+}
+
+.clue-block{
+  height: 100px;
+  width: calc(100% - 20px - var(--scrollbar));
+  margin: 10px;
+  padding: 5px;
+  background-color: rgb(235, 235, 235);
+}
+
+.clue-block:hover{
+  cursor: pointer;
+}
+
+.active-clue{
+  outline: 3px solid rgb(57, 149, 255);
+}
+
+.clue-type-no{
+  color: rgb(78, 121, 248); 
+}
+
+.clue-textarea{
+  height: 60px;
+  width: calc(100% - 20px);
+  resize: none;
+  border: none;
+  outline: none;
+  margin: 5px;
+  background-color: rgb(235, 235, 235);
+}
+
+.answer-area{
+  padding: 20px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+<script type="text/javascript">
+
+const ClueType = {
+  ACROSS: "1",
+  DOWN: "2"
+};
+
+const ClueTypeName = {
+  ACROSS: "ヨコ",
+  "1": "ヨコ",
+  DOWN: "タテ",
+  "2": "タテ"
+};
+
+new Vue({
+  el: "#app",
+  data: {
+    // クロスワードパズル
+    puzzle:  [
+      [
+        {type: "input-mass", value: "", clueNo: "1", acrossClueNo: "1", downClueNo: "1", keyWordId: ""}, 
+        {type: "input-mass", value: "", clueNo: "3", acrossClueNo: "1", downClueNo: "3", keyWordId: ""}
+      ],
+      [
+        {type: "input-mass", value: "", clueNo: "2", acrossClueNo: "2", downClueNo: "1", keyWordId: ""},
+        {type: "input-mass", value: "", clueNo: "", acrossClueNo: "2", downClueNo: "3", keyWordId: ""}
+      ],
+    ],
+    activeMass: {
+      rowNo: 0,
+      colNo: 0,
+      isAcrossSts: true
+    },
+    // カギ情報
+    clue: {
+      across: {
+        "1": null,
+        "3": null
+      },
+      down: {
+        "1": null,
+        "2": null
+      }
+    },
+    // アイウエオ表
+    aiueoTableList: [
+      // 上段
+      [
+        [{value: "ア", type: "aiueo-mass"}, {value: "カ", type: "aiueo-mass"}, {value: "サ", type: "aiueo-mass"}, {value: "タ", type: "aiueo-mass"}, {value: "ナ", type: "aiueo-mass"}, {value: "ハ", type: "aiueo-mass"}, {value: "マ", type: "aiueo-mass"}, {value: "ヤ", type: "aiueo-mass"}, {value: "ラ", type: "aiueo-mass"}, {value: "ワ", type: "aiueo-mass"}, {value: "ン", type: "aiueo-mass"}],
+        [{value: "イ", type: "aiueo-mass"}, {value: "キ", type: "aiueo-mass"}, {value: "シ", type: "aiueo-mass"}, {value: "チ", type: "aiueo-mass"}, {value: "ニ", type: "aiueo-mass"}, {value: "ヒ", type: "aiueo-mass"}, {value: "ミ", type: "aiueo-mass"}, {value: "", type: "space-mass"}, {value: "リ", type: "aiueo-mass"}, {value: "", type: "space-mass"}, {value: "ー", type: "aiueo-mass"}],
+        [{value: "ウ", type: "aiueo-mass"}, {value: "ク", type: "aiueo-mass"}, {value: "ス", type: "aiueo-mass"}, {value: "ツ", type: "aiueo-mass"}, {value: "ヌ", type: "aiueo-mass"}, {value: "フ", type: "aiueo-mass"}, {value: "ム", type: "aiueo-mass"}, {value: "ユ", type: "aiueo-mass"}, {value: "ル", type: "aiueo-mass"}, {value: "", type: "space-mass"}, {value: "", type: "space-mass"}],
+        [{value: "エ", type: "aiueo-mass"}, {value: "ケ", type: "aiueo-mass"}, {value: "セ", type: "aiueo-mass"}, {value: "テ", type: "aiueo-mass"}, {value: "ネ", type: "aiueo-mass"}, {value: "ヘ", type: "aiueo-mass"}, {value: "メ", type: "aiueo-mass"}, {value: "", type: "space-mass"}, {value: "レ", type: "aiueo-mass"}, {value: "", type: "space-mass"}, {value: "", type: "space-mass"}],
+        [{value: "オ", type: "aiueo-mass"}, {value: "コ", type: "aiueo-mass"}, {value: "ソ", type: "aiueo-mass"}, {value: "ト", type: "aiueo-mass"}, {value: "ノ", type: "aiueo-mass"}, {value: "ホ", type: "aiueo-mass"}, {value: "モ", type: "aiueo-mass"}, {value: "ヨ", type: "aiueo-mass"}, {value: "ロ", type: "aiueo-mass"}, {value: "ヲ", type: "aiueo-mass"}, {value: "", type: "space-mass"}]
+      ],
+      // 下段
+      [
+        [{value: "ガ", type: "aiueo-mass"}, {value: "ザ", type: "aiueo-mass"}, {value: "ダ", type: "aiueo-mass"}, {value: "バ", type: "aiueo-mass"}, {value: "パ", type: "aiueo-mass"}],
+        [{value: "ギ", type: "aiueo-mass"}, {value: "ジ", type: "aiueo-mass"}, {value: "ヂ", type: "aiueo-mass"}, {value: "ビ", type: "aiueo-mass"}, {value: "ピ", type: "aiueo-mass"}],
+        [{value: "グ", type: "aiueo-mass"}, {value: "ズ", type: "aiueo-mass"}, {value: "ズ", type: "aiueo-mass"}, {value: "ブ", type: "aiueo-mass"}, {value: "プ", type: "aiueo-mass"}],
+        [{value: "ゲ", type: "aiueo-mass"}, {value: "ゼ", type: "aiueo-mass"}, {value: "デ", type: "aiueo-mass"}, {value: "ベ", type: "aiueo-mass"}, {value: "ペ", type: "aiueo-mass"}],
+        [{value: "ゴ", type: "aiueo-mass"}, {value: "ゾ", type: "aiueo-mass"}, {value: "ド", type: "aiueo-mass"}, {value: "ボ", type: "aiueo-mass"}, {value: "ポ", type: "aiueo-mass"}]
+      ]
+    ]
+  },
+  watch: {
+    puzzle: function(newVal, oldVal){
+      this.renewClueNo();
+    }
+  },
+  methods: {
+    // 空文字判定
+    isEmpty(value){
+      return (value === undefined || value === null || value === "");
+    },
+
+    // 空文字でない判定
+    isNotEmpty(value){
+      return !this.isEmpty(value);
+    },
+
+    // 新規マス作成
+    getNewMass(type, clueNo, acrossClueNo, downClueNo, keyWordId){
+      return {
+        type: type, 
+        value: null, 
+        clueNo: clueNo, 
+        acrossClueNo: acrossClueNo, 
+        downClueNo: downClueNo, 
+        keyWordId: key
+      };
+    },
+
+    // 新規アクティブマス作成
+    getNewActiveMass(rowNo, colNo, isAcrossSts){
+      return {
+        rowNo: rowNo,
+        colNo: colNo,
+        isAcrossSts: isAcrossSts
+      };
+    },
+
+    // 指定マスがアクティブかどうか
+    isActiveMass(rowNo, colNo){
+      return (this.activeMass.rowNo === rowNo) && (this.activeMass.colNo === colNo);
+    },
+
+    // 指定マスがアクティブ行・列かどうか
+    isActiveLine(rowNo, colNo){
+      let actMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
+      let tarMass = this.puzzle[rowNo][colNo];
+
+      // アクティブマスまたは指定マスが黒マスの場合
+      if(actMass.type == "filled-mass" || tarMass.type == "filled-mass"){
+        return false;
+      }
+
+      // 選択範囲タテヨコによって分岐
+      if(this.activeMass.isAcrossSts){
+        return tarMass.acrossClueNo == actMass.acrossClueNo;
+      } else {
+        return tarMass.downClueNo == actMass.downClueNo;
+      }
+    },
+
+    // パズルマスのclass属性取得
+    getPzlMassClsAttr(pzlMass, rowNo, colNo){
+      let clsAttrList = [];
+
+      // パズルマス共通属性
+      clsAttrList.push("puzzle-mass");
+
+      // パズルマス種別
+      clsAttrList.push(pzlMass.type);
+
+      if (this.isActiveMass(rowNo, colNo)){
+        // アクティブマス
+        clsAttrList.push("active-mass");
+      } else if(this.isActiveLine(rowNo, colNo)) {
+        // アクティブ行/列
+        clsAttrList.push("active-line");
+      }
+
+      return clsAttrList;
+    },
+
+    // 指定されたマスをアクティブマスに切り替え
+    changeActiveMass(rowNo, colNo){
+      let pzlMass = this.puzzle[rowNo][colNo];
+
+      // アクティブカギステータスの切り替え
+      let isAcrossSts = true;
+
+      // 変更先マスが現アクティブマスの場合
+      if ((this.activeMass.rowNo === rowNo) && (this.activeMass.colNo === colNo)){
+        // カギのタテヨコ切り替え
+        if (this.activeMass.isAcrossSts){
+          // タテのカギが存在するなら切り替える
+          isAcrossSts = (pzlMass.downClueNo === null)
+        } else {
+          // ヨコのカギが存在するなら切り替える
+          isAcrossSts = (pzlMass.acrossClueNo !== null)
+        }
+      } else {
+        // ヨコのカギがあればヨコ、なければタテ
+        isAcrossSts = (pzlMass.acrossClueNo !== null)
+      }
+
+      // アクティブマス差し替え
+      this.activeMass = this.getNewActiveMass(rowNo, colNo, isAcrossSts);
+    },
+
+    // アクティブマスを次の入力マスへ移動
+    shiftActiveMass(){
+      let nextRowNo = null;
+      let nextColNo = null;
+
+      // 次の入力マスのインデックスを取得
+      if(this.activeMass.isAcrossSts){
+        nextRowNo = this.activeMass.rowNo;
+        nextColNo = this.activeMass.colNo + 1
+      } else {
+        nextRowNo = this.activeMass.rowNo + 1;
+        nextColNo = this.activeMass.colNo;
+      }
+
+      // 次の入力マス
+      let nextMass = this.puzzle[nextRowNo][nextColNo];
+
+      // 次の入力マスが入力マスの場合
+      if(this.isNotEmpty(nextMass) && nextMass.type === "input-mass"){
+        // アクティブマス切り替え
+        this.activeMass = {
+          rowNo: nextRowNo,
+          colNo: nextColNo,
+          isAcrossSts: this.activeMass.isAcrossSts
+        }
+      }
+    },
+
+    // キーワード回答作成
+    createKeyWordAnswer(){
+      let kwMassList = [];
+
+      for (let pzlRow of this.puzzle){
+        // キーワードマスのみを抽出
+        kwMassList = kwMassList.concat(pzlRow.filter((mass) => this.isNotEmpty(mass.keyWordId)));
+      }
+
+      // キーワードID昇順で並び替え
+      kwMassList.sort((prev, next) => prev.keyWordId.localeCompare(next.keyWordId));
+
+      // マスの入力値のリストに変換
+      return kwMassList.map((mass) => mass.value).join("");
+    },
+
+    // アクティブマスに文字入力する
+    setActiveMassValue(value){
+      // 文字入力
+      let pzlMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
+      this.$set(pzlMass, "value", value);
+
+      // アクティブマスを次の入力マスへ移動
+      this.shiftActiveMass();
+    },
+
+    // パズル行追加
+    addRow(){
+      let newRow = new Array();
+
+      for(let row_i = 0; row_i < this.puzzle[0].length; row_i++){
+        newRow.push({type: "input-mass", value: "", clueNo: "", acrossClueNo: "", downClueNo: "", keyWordId: ""});
+      }
+
+      this.puzzle.push(newRow);
+    },
+
+    // パズル行削除
+    delRow(){
+      if(this.puzzle.length > 2){
+        this.puzzle.pop();
+      }
+    },
+
+    // パズル列追加
+    addColumn(){
+      for(let pzlRow of this.puzzle){
+        pzlRow.push({type: "input-mass", value: "", clueNo: "", acrossClueNo: "", downClueNo: "", keyWordId: ""});
+      }
+    },
+
+    // パズル削除
+    delColumn(){
+      if(this.puzzle[0].length > 2){
+        for(let pzlRow of this.puzzle){
+        pzlRow.pop();
+        }
+      }
+    },
+
+    // 黒マス切り替え
+    switchMassType(){
+      let actMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
+      actMass.type = (actMass.type === "input-mass" ? "filled-mass" : "input-mass");
+      actMass.value = null;
+
+      this.renewClueNo();
+    },
+
+    // カギ・解答番号計算
+    calcClueAndKeywordNo(){
+
+    },
+
+    // カギ番号更新
+    renewClueNo(){
+      let nextClueNo = 1;
+
+      for(let colNo in this.puzzle[0]){
+        for(let rowNo in this.puzzle){
+          // IN句のindexはString型らしい
+          rowNo = Number(rowNo);
+          colNo = Number(colNo);
+
+          let row = this.puzzle[rowNo];
+          let mass = row[colNo];
+
+          // confirm(rowNo + ", " + colNo);
+
+          // カギ番号クリア
+          mass.clueNo = null;
+          mass.acrossClueNo = null;
+          mass.downClueNo = null;
+
+          // 黒マスはスキップ
+          if(mass.type == "filled-mass"){
+            continue;
+          }
+
+          //　1. カギ番号設定
+
+          // ヨコのカギチェック
+          //   左端 または 左隣が黒マス
+          //     かつ
+          //   右端でない かつ 右隣が白マス
+          if(((colNo == 0) || (row[colNo - 1].type == "filled-mass"))
+            && ((colNo < row.length - 1) && (row[colNo + 1].type == "input-mass"))
+          ){
+              // confirm("ヨコ");
+              // confirm(rowNo + ", " + (colNo - 1) + ": " + JSON.stringify(row[colNo - 1]));
+              // confirm(rowNo + ", " + colNo + ": " + JSON.stringify(row[colNo]));
+              // confirm(rowNo + ", " + (colNo + 1) + ": " + JSON.stringify(row[colNo + 1]));
+              mass.clueNo = nextClueNo;
+              mass.acrossClueNo = mass.clueNo;
+              nextClueNo++;
+          }
+          
+          // タテのカギチェック
+          //   上端 または 上隣が黒マス
+          //     かつ
+          //   下端でない かつ 下隣が白マス
+          if(((rowNo == 0) || (this.puzzle[rowNo - 1][colNo].type == "filled-mass"))
+            && ((rowNo < this.puzzle.length - 1) && (this.puzzle[rowNo + 1][colNo].type == "input-mass"))
+          ){
+              // confirm("タテ");
+              // confirm((rowNo - 1) + ", " + colNo + ": " + JSON.stringify(this.puzzle[rowNo - 1] ? this.puzzle[rowNo - 1][colNo] : undefined));
+              // confirm(rowNo + ", " + colNo + ": " + JSON.stringify(row[colNo]));
+              // confirm((rowNo + 1) + ", " + colNo + ": " + JSON.stringify(this.puzzle[rowNo + 1] ? this.puzzle[rowNo + 1][colNo] : undefined));
+              
+              if(mass.clueNo === null){
+                mass.clueNo = nextClueNo;
+                nextClueNo++;
+              }
+
+              mass.downClueNo = mass.clueNo;
+          }
+
+          // 2. ヨコのカギ番号設定
+          // 左端でない かつ 左隣が白マス
+          if(mass.acrossClueNo === null
+            && colNo > 0
+            && row[colNo - 1].type == "input-mass"
+          ){
+            mass.acrossClueNo = row[colNo - 1].acrossClueNo;
+          }
+
+
+          // 3. タテのカギ番号設定
+          // 上端でない かつ 上隣が白マス
+          if(mass.downClueNo === null
+            && rowNo > 0
+            && this.puzzle[rowNo - 1][colNo].type == "input-mass"
+          ){
+            mass.downClueNo = this.puzzle[rowNo - 1][colNo].downClueNo;
+          }
+
+        }
+      }
+    },
+    // カギ一覧取得
+    getClueList(){
+      let clueList = [];
+
+      for(let colNo = 0; colNo < this.puzzle[0].length; colNo++){
+        for(let rowNo = 0; rowNo < this.puzzle.length; rowNo++){
+          let pzlMass = this.puzzle[rowNo][colNo];
+
+          // カギ番号のあるマスの場合
+          if(this.isNotEmpty(pzlMass.clueNo)){
+
+            // ヨコのカギが存在する場合
+            if(pzlMass.acrossClueNo === pzlMass.clueNo){
+              clueList.push({
+                type: ClueType.ACROSS,
+                typeName: ClueTypeName.ACROSS,
+                clueNo: pzlMass.clueNo,
+                text: this.clue.across[pzlMass.clueNo]
+              });
+            }
+
+            // タテのカギが存在する場合
+            if(pzlMass.downClueNo === pzlMass.clueNo){
+              clueList.push({
+                type: ClueType.DOWN,
+                typeName: ClueTypeName.DOWN,
+                clueNo: pzlMass.clueNo,
+                text: this.clue.across[pzlMass.clueNo]
+              });
+            }
+
+          }
+        }
+      }
+
+      return clueList;
+    },
+
+    // カギ区画クラス属性取得
+    getClueBlockClsAttr(clueType, clueNo){
+      let clsAttrList = ["clue-block"];
+      
+      let actMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
+
+      if(this.activeMass.isAcrossSts){
+        if(clueType == ClueType.ACROSS && clueNo == actMass.acrossClueNo){
+          clsAttrList.push("active-clue");
+        }
+      } else {
+        if(clueType == ClueType.DOWN && clueNo == actMass.downClueNo){
+          clsAttrList.push("active-clue");
+        }
+      }
+
+      return clsAttrList;
+    },
+
+    // アクティブカギブロック変更（アクティブマス変更）
+    changeActiveClue(clueType, clueNo){
+      for(let colNo = 0; colNo < this.puzzle[0].length; colNo++){
+        for(let rowNo = 0; rowNo < this.puzzle.length; rowNo++){
+          
+          // 新しいアクティブマスを探す
+          if(clueNo == this.puzzle[rowNo][colNo].clueNo){
+            this.activeMass = this.getNewActiveMass(rowNo, colNo, clueType == ClueType.ACROSS);
+            return;
+          }
+        }
+      }
+
+    }
+  }
+});
+</script>
+</html>
