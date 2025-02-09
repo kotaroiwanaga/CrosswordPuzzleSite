@@ -1,0 +1,84 @@
+@startuml クロスワードパズルサイト ER図
+''' 全テーブル共通カラムとして下記が設定されているものとする。
+''' {
+'''     create_user: string
+'''     create_date: timestamp
+'''     update_user: string
+'''     update_date: timestamp
+'''     delete_flg: string
+'''     version_no: int
+''' }
+
+left to right direction
+package "パズル情報" #HoneyDew {
+
+    entity "クロスワードパズル情報" as tb_trn_crossword {
+        +puzzle_id: string
+        --
+        title: string
+        row_size: int
+        column_size: int
+        assumed_difficulty_rate: int
+        access_mode: string
+    }
+
+    entity "カギ情報" as tb_trn_cw_clue {
+        +puzzle_id: string
+        (FK: tb_trn_crossword, puzzle_id)
+        +clue_type: string
+        +clue_no: int
+        --
+        clue_text: string
+    }
+
+    entity "マス正解情報" as tb_trn_mass_answer{
+        +puzzle_id: string
+        (FK: tb_trn_crossword, puzzle_id)
+        +row_no: int
+        +column_no: int
+        --
+        answer_char: string
+        across_clue_no: int
+        down_clue_no: int
+        keyword_no: string
+    }
+}
+
+package "ユーザ情報" #Bisque{
+    entity "ユーザ情報" as tb_trn_user {
+        +user_id: string
+        --
+        user_type: string
+        user_name: string
+    }
+
+    entity "ゲームプレイ状況(パズル単位)" as tb_trn_game_status_pzl {
+        +puzzle_id: string
+        (FK: tb_trn_crossword, puzzle_id)
+        +user_id: string
+        (FK: tb_trn_user, user_id)
+        --
+        game_status: string
+        difficulty_rate: int
+        interest_rate: int
+    }
+
+    entity "ゲームプレイ状況(マス単位)" as tb_trn_game_status_mass {
+        +puzzle_id: string
+        (FK: tb_trn_game_status_pzl, puzzle_id)
+        +user_id: string
+        (FK: tb_trn_game_status_pzl, user_id)
+        +row_no: int
+        +column_no: int
+        --
+        input_char: string
+    }
+}
+
+tb_trn_crossword ||--|{ tb_trn_cw_clue
+tb_trn_crossword ||--|{ tb_trn_mass_answer
+tb_trn_crossword o--|{ tb_trn_game_status_pzl
+tb_trn_user o--|{ tb_trn_game_status_pzl
+tb_trn_game_status_pzl o--|{tb_trn_game_status_mass
+
+@enduml
