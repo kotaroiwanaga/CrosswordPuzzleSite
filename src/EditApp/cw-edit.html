@@ -1,130 +1,199 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <title>クロスワードパズル編集</title>
+  <title>クロスワードパズル</title>
   <base target="_top">
   <meta charset="UTF-8">
 </head>
 
 <body>
 <div id="app">
-  <h1>クロスワード作成/編集</h1>
+  <!-- 待機画面 -->
+  <div class="wait-screen" v-show="waitFlg">
+    <div class="indicator"></div>
+    <p class="wait-mess">保存中...</p>
+  </div>
+
+  <h1>クロスワード</h1>
 
   <!-- 基本情報編集エリア -->
   <div>
     <h4>タイトル</h4>
-    <input type="text">
+    <input type="text" v-model="title">
+    <button @click="savePuzzle()">保存</button>
   </div>
 
   <!-- マス編集エリア -->
   <div class="edit-area">
+  <!-- モード切替タブ -->
+  <div class="edit-tab-area">
+    <input type="radio" name="edit-mode" value="01" v-model="editMode" id="edit-mode-tab-rb1" class="edit-mode-tab-rb">
+    <label for="edit-mode-tab-rb1" class="edit-mode-tab-lbl">パズルマス編集</label>
+    <input type="radio" name="edit-mode" value="02" v-model="editMode" id="edit-mode-tab-rb2" class="edit-mode-tab-rb">
+    <label for="edit-mode-tab-rb2" class="edit-mode-tab-lbl">解答マス選択</label>
+  </div>
+
+  <!-- 編集タブエリア（モード：パズルマス編集） -->
+  <div v-if="editMode == '01'" class="edit-mode-tab-area">
     <!-- 行追加/削除ボタン -->
     <div class="mass-edit-group">
-      <h4>行追加/削除</h4>
-      <button type="button" @click="addRow()">＋</button>
-      <button type="button" @click="delRow()">ー</button>
+    <h4>行追加/削除</h4>
+    <button type="button" @click="addRow()">＋</button>
+    <button type="button" @click="delRow()">ー</button>
     </div>
-
+    
     <!-- 列追加/削除ボタン -->
     <div class="mass-edit-group">
       <h4>列追加/削除</h4>
       <button type="button" @click="addColumn()">＋</button>
       <button type="button" @click="delColumn()">ー</button>
     </div>
-
+    
     <!-- 黒マスボタン -->
     <div class="mass-edit-group">
       <button type="button" @click="switchMassType()">黒マス</button>
     </div>
+  </div>
 
-    <!-- パズル -->
-    <div class="puzzle-edit-area">
-      <table class="cw">
-        <tbody>
-          <tr v-for="(pzlRow, rowNo) in puzzle">
-            <td v-for="(pzlMass, colNo) in pzlRow" 
-            :class="getPzlMassClsAttr(pzlMass, rowNo, colNo)">
-            <div @click="changeActiveMass(rowNo, colNo)">
-              <div :class="['puzzle-mass-inner', isNotEmpty(pzlMass.keyWordId) ? 'key-word-mass-inner' : '']">
-                <div class="clue-no">
-                  {{ pzlMass.clueNo }}
-                </div>
-                <div class="input-char">
-                  {{ pzlMass.value }}
-                </div>
-                <div class="key-word-id">
-                  {{pzlMass.keyWordId}}
-                </div>
-              </div>
-              <d/div>
-            </td>
-          </tr>  
-        </tbody>
-      </table> 
+  <!-- 編集タブエリア（モード：解答マス選択） -->
+  <div v-else class="edit-mode-tab-area">
+    <!-- 1文字戻るボタン -->
+    <div class="mass-edit-group">
+      <button type="button" @click="popAnswerMass()">1文字戻る</button>
     </div>
+
+    <!-- 全クリアボタン -->
+    <div class="mass-edit-group">
+      <button type="button" @click="clearAnserMass()">クリア</button>
+    </div>
+
+    <!-- 解答エリア -->
+    <div class="answer-area">
+      <table class="cw">
+        <tr v-for="(pzlRow, rowNo) in getAnsMassTable()">
+          <td v-for="(ansMass, massNo) in pzlRow" class="puzzle-mass answer-mass">
+            <div class="puzzle-mass-inner key-word-mass-inner">
+              <div class="clue-no"></div>
+              <div class="input-char">
+                {{ansMass.value}}
+              </div>
+              <div class="key-word-id">
+                {{ansMass.keywordNo}}
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- パズル -->
+  <div class="puzzle-edit-area">
+    <table class="cw">
+      <tbody>
+        <tr v-for="(pzlRow, rowNo) in puzzle">
+          <td v-for="(pzlMass, colNo) in pzlRow" 
+          :class="getPzlMassClsAttr(pzlMass, rowNo, colNo)">
+          <div @click="execPzlMassClickEvent(rowNo, colNo)">
+            <div :class="['puzzle-mass-inner', isNotEmpty(pzlMass.keywordNo) ? 'key-word-mass-inner' : '']">
+              <div class="clue-no">
+                {{ pzlMass.clueNo }}
+              </div>
+              <div class="input-char">
+                {{ pzlMass.value }}
+              </div>
+              <div class="key-word-id">
+                {{pzlMass.keywordNo}}
+              </div>
+            </div>
+            <d/div>
+          </td>
+        </tr>  
+      </tbody>
+    </table> 
+  </div>
   </div>
 
   <!-- アイウエオ表 -->
-   <div class="edit-area">
-    <details>
-      <summary>五十音表</summary>
-      <table v-for="aiueoTable in aiueoTableList" class="aiueo">
-        <tbody>
-          <tr v-for="aiueoRow in aiueoTable">
-            <td v-for="aiueoMass in aiueoRow" :class="aiueoMass.type" @click="aiueoMass.type == 'aiueo-mass' ? setActiveMassValue(aiueoMass.value) : null">
-              {{ aiueoMass.value }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </details>
+  <div class="edit-area">
+  <details>
+    <summary>五十音表</summary>
+    <table v-for="aiueoTable in aiueoTableList" class="aiueo">
+      <tbody>
+        <tr v-for="aiueoRow in aiueoTable">
+          <td v-for="aiueoMass in aiueoRow" :class="aiueoMass.type" @click="aiueoMass.type == 'aiueo-mass' ? setActiveMassValue(aiueoMass.value) : null">
+            {{ aiueoMass.value }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
   </div>
 
-    <!-- カギ編集エリア -->
-    <div class="edit-area">
-      <details>
-        <summary>カギ編集</summary>
-        <!-- カギ編集ボタンエリア -->
-        <div class="clue-edit-btn-area">
-          <button type="button" @click="">クリア</button>
-          <button type="button" @click="">全クリア</button>
-        </div>
-        <!-- カギ一覧エリア -->
-        <div class="clue-area">
-          <div v-for="clue in getClueList()" :class="getClueBlockClsAttr(clue.type, clue.clueNo)" @click="changeActiveClue(clue.type, clue.clueNo)">
-            <div class="clue-type-no"><b>{{clue.typeName}} {{clue.clueNo}}</b></div>
-            <div class="clue-text-area">
-              <textarea class="clue-textarea">{{clue.text}}</textarea>
-            </div>
+  <!-- カギ編集エリア -->
+  <div class="edit-area">
+    <details>
+      <summary>カギ編集</summary>
+      <!-- カギ編集ボタンエリア -->
+      <div class="clue-edit-btn-area">
+        <button type="button" @click="clearClueText()">クリア</button>
+        <button type="button" @click="clearAllClueText()">全クリア</button>
+      </div>
+      <!-- カギ一覧エリア -->
+      <div class="clue-area">
+        <div v-for="clue in getClueList()" :class="getClueBlockClsAttr(clue.type, clue.clueNo)" @click="changeActiveClue(clue.type, clue.clueNo)">
+          <div class="clue-type-no"><b>{{clue.typeName}} {{clue.clueNo}} 「{{clue.answer}}」</b></div>
+          <div class="clue-text-area">
+            <textarea class="clue-textarea" v-model="clueListInfo[clue.type][clue.clueNo]"></textarea>
           </div>
         </div>
-        <!-- 解答エリア -->
-        <div class="answer-area">
-          <table>
-            <tr>
-              <td class="puzzle-mass">
-                <div class="puzzle-mass-inner key-word-mass-inner">
-                  <div class="clue-no">
-                    
-                  </div>
-                  <div class="input-char">
-                    ア
-                  </div>
-                  <div class="key-word-id">
-                    A
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </details>
-    </div>
+      </div>
+    </details>
+  </div>
 
 </div>
 </body>
 
 <style type="text/css">
+/*** 待機画面 ************************************************************/
+.wait-screen{
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.4);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.indicator{
+  border: 12px solid #fdfdfd;
+  border-radius: 50%;
+  border-top: 12px solid #409df9;
+  width: 100px;
+  height: 100px;
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  0%{
+    transform: rotate(0deg);
+  }
+
+  100%{
+    transform: rotate(360deg);
+  }
+}
+
+.wait-mess{
+  font-size: 20px;
+  color: #fdfdfd;
+}
+
 /*** 編集エリア ************************************************************/
 .edit-area{
   display: inline-block;
@@ -138,6 +207,34 @@
   padding: 10px;
 }
 
+.edit-tab-area{
+  display: flex; 
+}
+
+.edit-mode-tab-rb{
+  display: none;
+}
+
+.edit-mode-tab-lbl{
+  display: block;
+  width: 215px;
+  height: 40px;
+  line-height: 40px;
+  background-color: rgb(95, 95, 95);
+  text-align: center;
+}
+
+input:checked + .edit-mode-tab-lbl{
+  display: block;
+  background-color: rgb(201, 201, 201);
+}
+
+.edit-mode-tab-area{
+  height: 230px;
+  background-color: rgb(201, 201, 201);
+  overflow-y: scroll;
+}
+
 table.cw{
     border-collapse: collapse;
     
@@ -145,7 +242,21 @@ table.cw{
     margin-bottom: 50px;
 }
 
+
+/*** 解答マス選択タブエリア *****************************************************/
+.answer-area{
+  padding: 10px;
+}
+
+.answer-mass{
+  background-color: white;
+}
+
 /*** パズル表 *************************************************************/
+.puzzle-edit-area{
+  margin-top: 10px;
+}
+
 .puzzle-mass{
   border: 2px solid rgb(140, 140, 140);
   height: 60px;
@@ -280,14 +391,20 @@ table.aiueo{
   margin: 5px;
   background-color: rgb(235, 235, 235);
 }
-
-.answer-area{
-  padding: 20px;
-}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
 <script type="text/javascript">
+
+const EditMode = {
+  MASS_EDIT: "01",
+  ANS_SLCT: "02"
+}
+
+const MassType = {
+  INPUT: "0",
+  FILLED: "1"
+}
 
 const ClueType = {
   ACROSS: "1",
@@ -301,32 +418,50 @@ const ClueTypeName = {
   "2": "タテ"
 };
 
+const KEYWORD_ID_LIST = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+
+const KEYWORD_TBL_MIN_COL = 5;
+
 new Vue({
   el: "#app",
   data: {
-    // クロスワードパズル
+    // 待機モードフラグ
+    waitFlg: false,
+
+    // パズルID
+    puzzleId: null,
+    // puzzleId: <?= curPuzzleId ?>,
+
+    // タイトル
+    title: null,
+
+    // 編集モード
+    editMode: EditMode.MASS_EDIT,
+
+    // パズルマス情報
     puzzle:  [
       [
-        {type: "input-mass", value: "", clueNo: "1", acrossClueNo: "1", downClueNo: "1", keyWordId: ""}, 
-        {type: "input-mass", value: "", clueNo: "3", acrossClueNo: "1", downClueNo: "3", keyWordId: ""}
+        {type: MassType.INPUT, value: "", clueNo: "1", typeClueNo:{"1": "1", "2": "1"}, keywordNo: ""}, 
+        {type: MassType.INPUT, value: "", clueNo: "3", typeClueNo:{"1": "1", "2": "3"}, keywordNo: ""}
       ],
       [
-        {type: "input-mass", value: "", clueNo: "2", acrossClueNo: "2", downClueNo: "1", keyWordId: ""},
-        {type: "input-mass", value: "", clueNo: "", acrossClueNo: "2", downClueNo: "3", keyWordId: ""}
+        {type: MassType.INPUT, value: "", clueNo: "2", typeClueNo:{"1": "2", "2": "1"}, keywordNo: ""},
+        {type: MassType.INPUT, value: "", clueNo: "", typeClueNo:{"1": "2", "2": "3"}, keywordNo: ""}
       ],
     ],
+    // アクティブマス情報
     activeMass: {
       rowNo: 0,
       colNo: 0,
-      isAcrossSts: true
+      clueType: ClueType.ACROSS
     },
-    // カギ情報
-    clue: {
-      across: {
+    // カギ問題文情報
+    clueListInfo: {
+      "1": {
         "1": null,
         "3": null
       },
-      down: {
+      "2": {
         "1": null,
         "2": null
       }
@@ -354,6 +489,8 @@ new Vue({
   watch: {
     puzzle: function(newVal, oldVal){
       this.renewClueNo();
+
+      // confirm(this.editMode)
     }
   },
   methods: {
@@ -367,24 +504,38 @@ new Vue({
       return !this.isEmpty(value);
     },
 
+    // マス情報取得
+    getMassInfo(rowNo, colNo){
+      return this.puzzle[rowNo][colNo];
+    },
+
     // 新規マス作成
-    getNewMass(type, clueNo, acrossClueNo, downClueNo, keyWordId){
-      return {
+    getNewMass(type, clueNo = null, acrossClueNo = null, downClueNo = null, keywordNo = null){
+      let newMass = {
         type: type, 
         value: null, 
         clueNo: clueNo, 
-        acrossClueNo: acrossClueNo, 
-        downClueNo: downClueNo, 
-        keyWordId: key
+        typeClueNo: {},
+        keywordNo: keywordNo
       };
+
+      newMass.typeClueNo[ClueType.ACROSS] = acrossClueNo;
+      newMass.typeClueNo[ClueType.DOWN] = downClueNo;
+
+      return newMass;
+    },
+
+    // アクティブマスの取得
+    getActiveMass(){
+      return this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
     },
 
     // 新規アクティブマス作成
-    getNewActiveMass(rowNo, colNo, isAcrossSts){
+    getNewActiveMass(rowNo, colNo, clueType){
       return {
         rowNo: rowNo,
         colNo: colNo,
-        isAcrossSts: isAcrossSts
+        clueType: clueType
       };
     },
 
@@ -393,22 +544,106 @@ new Vue({
       return (this.activeMass.rowNo === rowNo) && (this.activeMass.colNo === colNo);
     },
 
-    // 指定マスがアクティブ行・列かどうか
+    // 指定マスがアクティブ行/列かどうか
     isActiveLine(rowNo, colNo){
       let actMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
       let tarMass = this.puzzle[rowNo][colNo];
 
       // アクティブマスまたは指定マスが黒マスの場合
-      if(actMass.type == "filled-mass" || tarMass.type == "filled-mass"){
+      if(actMass.type == MassType.FILLED || tarMass.type == MassType.FILLED){
         return false;
       }
 
-      // 選択範囲タテヨコによって分岐
-      if(this.activeMass.isAcrossSts){
-        return tarMass.acrossClueNo == actMass.acrossClueNo;
-      } else {
-        return tarMass.downClueNo == actMass.downClueNo;
+      // アクティブマスとカギ番号が一致するか
+      let tarMassClueNo = tarMass.typeClueNo[this.activeMass.clueType];
+      let actMassClueNo = actMass.typeClueNo[this.activeMass.clueType];
+
+      return tarMassClueNo == actMassClueNo;
+    },
+
+    // キーワードID発行
+    getNextKeywordNo(){
+      let nextIdIdx = this.getAnsMassList().length;
+      let nextId = null;
+
+      if(nextIdIdx < KEYWORD_ID_LIST.length){
+        nextId = KEYWORD_ID_LIST[nextIdIdx];
       }
+
+      return nextId;
+    },
+
+    // 解答マスリスト取得
+    getAnsMassList(){
+      let ansMassList = [];
+
+      // キーワードIDを持つマスの抽出
+      for(let pzlRow of this.puzzle){
+        for(let mass of pzlRow){
+          if(this.isNotEmpty(mass.keywordNo)){
+            ansMassList.push(mass);
+          }
+        }
+      }
+
+      // キーワードIDアルファベット順に並び替え
+      ansMassList.sort(((mass1, mass2) => mass1.keywordNo.charCodeAt(0) - mass2.keywordNo.charCodeAt(0)));
+
+      return ansMassList;
+    },
+
+    // 回答マステーブル取得
+    getAnsMassTable(){
+      let ansMassList = this.getAnsMassList();
+
+      if(ansMassList.length == 0){
+        return [];
+      }
+
+      let ansMassTbl = [[]];
+      let ansMassRow = ansMassTbl[0];
+
+      // パズル編集エリアをはみ出さないように改行
+      for(let mass of ansMassList){
+        if(ansMassRow.length >= Math.max(KEYWORD_TBL_MIN_COL, this.puzzle[0].length)){
+          ansMassRow = [mass];
+          ansMassTbl.push(ansMassRow);
+        } else {
+          ansMassRow.push(mass);
+        }
+      }
+
+      return ansMassTbl;
+    },
+
+    // カギ種別切り替え
+    toggleClueType(clueType){
+      return (clueType == ClueType.ACROSS) ? ClueType.DOWN : ClueType.ACROSS;
+    },
+
+    // パズルマスクリックイベント
+    execPzlMassClickEvent(rowNo, colNo){
+      switch (this.editMode) {
+        case EditMode.MASS_EDIT:
+          this.changeActiveMass(rowNo, colNo);
+          break;
+      
+        case EditMode.ANS_SLCT:
+          this.changeActiveMass(rowNo, colNo);
+          
+          let actMass = this.puzzle[rowNo][colNo];
+          // confirm(JSON.stringify(actMass.keywordNo));
+
+          if(this.isEmpty(actMass.keywordNo)){
+            // confirm(this.getNextKeywordNo());
+            actMass.keywordNo = this.getNextKeywordNo();
+          }
+
+          // confirm(JSON.stringify(actMass));
+          break;
+      }
+
+      // confirm(JSON.stringify(this.puzzle[rowNo][colNo]));
     },
 
     // パズルマスのclass属性取得
@@ -419,7 +654,8 @@ new Vue({
       clsAttrList.push("puzzle-mass");
 
       // パズルマス種別
-      clsAttrList.push(pzlMass.type);
+      // confirm("rowNo:" + rowNo + " colNo:" + colNo + " pzlMass:" + JSON.stringify(pzlMass));
+      clsAttrList.push(pzlMass.type == MassType.INPUT ? "input-mass" : "filled-mass");
 
       if (this.isActiveMass(rowNo, colNo)){
         // アクティブマス
@@ -436,26 +672,26 @@ new Vue({
     changeActiveMass(rowNo, colNo){
       let pzlMass = this.puzzle[rowNo][colNo];
 
-      // アクティブカギステータスの切り替え
-      let isAcrossSts = true;
+      // 新アクティブマスのカギ種別
+      let clueType = null;
 
       // 変更先マスが現アクティブマスの場合
       if ((this.activeMass.rowNo === rowNo) && (this.activeMass.colNo === colNo)){
+        clueType = this.activeMass.clueType;
+
         // カギのタテヨコ切り替え
-        if (this.activeMass.isAcrossSts){
-          // タテのカギが存在するなら切り替える
-          isAcrossSts = (pzlMass.downClueNo === null)
-        } else {
-          // ヨコのカギが存在するなら切り替える
-          isAcrossSts = (pzlMass.acrossClueNo !== null)
+        let oppClueType = this.toggleClueType(clueType);
+        if(this.isNotEmpty(pzlMass.typeClueNo[oppClueType])){
+          clueType = oppClueType;
         }
+
       } else {
         // ヨコのカギがあればヨコ、なければタテ
-        isAcrossSts = (pzlMass.acrossClueNo !== null)
+        clueType = this.isNotEmpty(pzlMass.typeClueNo[ClueType.ACROSS]) ? ClueType.ACROSS : ClueType.DOWN;
       }
 
       // アクティブマス差し替え
-      this.activeMass = this.getNewActiveMass(rowNo, colNo, isAcrossSts);
+      this.activeMass = this.getNewActiveMass(rowNo, colNo, clueType);
     },
 
     // アクティブマスを次の入力マスへ移動
@@ -464,25 +700,25 @@ new Vue({
       let nextColNo = null;
 
       // 次の入力マスのインデックスを取得
-      if(this.activeMass.isAcrossSts){
-        nextRowNo = this.activeMass.rowNo;
-        nextColNo = this.activeMass.colNo + 1
-      } else {
-        nextRowNo = this.activeMass.rowNo + 1;
-        nextColNo = this.activeMass.colNo;
+      switch (this.activeMass.clueType) {
+        case ClueType.ACROSS:
+          nextRowNo = this.activeMass.rowNo;
+          nextColNo = this.activeMass.colNo + 1;
+          break;
+      
+        case ClueType.DOWN:
+          nextRowNo = this.activeMass.rowNo + 1;
+          nextColNo = this.activeMass.colNo;
+          break;
       }
 
       // 次の入力マス
       let nextMass = this.puzzle[nextRowNo][nextColNo];
 
       // 次の入力マスが入力マスの場合
-      if(this.isNotEmpty(nextMass) && nextMass.type === "input-mass"){
+      if(this.isNotEmpty(nextMass) && nextMass.type === MassType.INPUT){
         // アクティブマス切り替え
-        this.activeMass = {
-          rowNo: nextRowNo,
-          colNo: nextColNo,
-          isAcrossSts: this.activeMass.isAcrossSts
-        }
+        this.activeMass = this.getNewActiveMass(nextRowNo, nextColNo, this.activeMass.clueType);
       }
     },
 
@@ -492,11 +728,11 @@ new Vue({
 
       for (let pzlRow of this.puzzle){
         // キーワードマスのみを抽出
-        kwMassList = kwMassList.concat(pzlRow.filter((mass) => this.isNotEmpty(mass.keyWordId)));
+        kwMassList = kwMassList.concat(pzlRow.filter((mass) => this.isNotEmpty(mass.keywordNo)));
       }
 
       // キーワードID昇順で並び替え
-      kwMassList.sort((prev, next) => prev.keyWordId.localeCompare(next.keyWordId));
+      kwMassList.sort((prev, next) => prev.keywordNo.localeCompare(next.keywordNo));
 
       // マスの入力値のリストに変換
       return kwMassList.map((mass) => mass.value).join("");
@@ -517,7 +753,7 @@ new Vue({
       let newRow = new Array();
 
       for(let row_i = 0; row_i < this.puzzle[0].length; row_i++){
-        newRow.push({type: "input-mass", value: "", clueNo: "", acrossClueNo: "", downClueNo: "", keyWordId: ""});
+        newRow.push(this.getNewMass(MassType.INPUT));
       }
 
       this.puzzle.push(newRow);
@@ -533,7 +769,7 @@ new Vue({
     // パズル列追加
     addColumn(){
       for(let pzlRow of this.puzzle){
-        pzlRow.push({type: "input-mass", value: "", clueNo: "", acrossClueNo: "", downClueNo: "", keyWordId: ""});
+        pzlRow.push(this.getNewMass(MassType.INPUT));
       }
     },
 
@@ -549,15 +785,10 @@ new Vue({
     // 黒マス切り替え
     switchMassType(){
       let actMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
-      actMass.type = (actMass.type === "input-mass" ? "filled-mass" : "input-mass");
+      actMass.type = (actMass.type === MassType.INPUT ? MassType.FILLED : MassType.INPUT);
       actMass.value = null;
 
       this.renewClueNo();
-    },
-
-    // カギ・解答番号計算
-    calcClueAndKeywordNo(){
-
     },
 
     // カギ番号更新
@@ -577,29 +808,29 @@ new Vue({
 
           // カギ番号クリア
           mass.clueNo = null;
-          mass.acrossClueNo = null;
-          mass.downClueNo = null;
+          mass.typeClueNo[ClueType.ACROSS] = null;
+          mass.typeClueNo[ClueType.DOWN] = null;
 
           // 黒マスはスキップ
-          if(mass.type == "filled-mass"){
+          if(mass.type == MassType.FILLED){
             continue;
           }
 
-          //　1. カギ番号設定
+          // 1. カギ番号設定
 
           // ヨコのカギチェック
           //   左端 または 左隣が黒マス
           //     かつ
           //   右端でない かつ 右隣が白マス
-          if(((colNo == 0) || (row[colNo - 1].type == "filled-mass"))
-            && ((colNo < row.length - 1) && (row[colNo + 1].type == "input-mass"))
+          if(((colNo == 0) || (row[colNo - 1].type == MassType.FILLED))
+            && ((colNo < row.length - 1) && (row[colNo + 1].type == MassType.INPUT))
           ){
               // confirm("ヨコ");
               // confirm(rowNo + ", " + (colNo - 1) + ": " + JSON.stringify(row[colNo - 1]));
               // confirm(rowNo + ", " + colNo + ": " + JSON.stringify(row[colNo]));
               // confirm(rowNo + ", " + (colNo + 1) + ": " + JSON.stringify(row[colNo + 1]));
               mass.clueNo = nextClueNo;
-              mass.acrossClueNo = mass.clueNo;
+              mass.typeClueNo[ClueType.ACROSS] = mass.clueNo;
               nextClueNo++;
           }
           
@@ -607,8 +838,8 @@ new Vue({
           //   上端 または 上隣が黒マス
           //     かつ
           //   下端でない かつ 下隣が白マス
-          if(((rowNo == 0) || (this.puzzle[rowNo - 1][colNo].type == "filled-mass"))
-            && ((rowNo < this.puzzle.length - 1) && (this.puzzle[rowNo + 1][colNo].type == "input-mass"))
+          if(((rowNo == 0) || (this.puzzle[rowNo - 1][colNo].type == MassType.FILLED))
+            && ((rowNo < this.puzzle.length - 1) && (this.puzzle[rowNo + 1][colNo].type == MassType.INPUT))
           ){
               // confirm("タテ");
               // confirm((rowNo - 1) + ", " + colNo + ": " + JSON.stringify(this.puzzle[rowNo - 1] ? this.puzzle[rowNo - 1][colNo] : undefined));
@@ -620,31 +851,32 @@ new Vue({
                 nextClueNo++;
               }
 
-              mass.downClueNo = mass.clueNo;
+              mass.typeClueNo[ClueType.DOWN] = mass.clueNo;
           }
 
           // 2. ヨコのカギ番号設定
           // 左端でない かつ 左隣が白マス
-          if(mass.acrossClueNo === null
+          if(mass.typeClueNo[ClueType.ACROSS] === null
             && colNo > 0
-            && row[colNo - 1].type == "input-mass"
+            && row[colNo - 1].type == MassType.INPUT
           ){
-            mass.acrossClueNo = row[colNo - 1].acrossClueNo;
+            mass.typeClueNo[ClueType.ACROSS] = row[colNo - 1].typeClueNo[ClueType.ACROSS];
           }
 
 
           // 3. タテのカギ番号設定
           // 上端でない かつ 上隣が白マス
-          if(mass.downClueNo === null
+          if(mass.typeClueNo[ClueType.DOWN] === null
             && rowNo > 0
-            && this.puzzle[rowNo - 1][colNo].type == "input-mass"
+            && this.puzzle[rowNo - 1][colNo].type == MassType.INPUT
           ){
-            mass.downClueNo = this.puzzle[rowNo - 1][colNo].downClueNo;
+            mass.typeClueNo[ClueType.DOWN]  = this.puzzle[rowNo - 1][colNo].typeClueNo[ClueType.DOWN] ;
           }
 
         }
       }
     },
+
     // カギ一覧取得
     getClueList(){
       let clueList = [];
@@ -655,24 +887,53 @@ new Vue({
 
           // カギ番号のあるマスの場合
           if(this.isNotEmpty(pzlMass.clueNo)){
-
             // ヨコのカギが存在する場合
-            if(pzlMass.acrossClueNo === pzlMass.clueNo){
+            if(pzlMass.typeClueNo[ClueType.ACROSS]  === pzlMass.clueNo){
+              // カギの回答取得
+              let clueAns = "";
+              for(let clueColNo = colNo; clueColNo < this.puzzle[0].length; clueColNo++){
+                let clueMass = this.puzzle[rowNo][clueColNo];
+
+                // confirm("across[" + rowNo + "][" + clueColNo + "]" + "\r\n" + JSON.stringify(clueMass));
+
+                if(clueMass.type == MassType.FILLED){
+                  break;
+                }
+
+                clueAns += (this.isEmpty(clueMass.value) ? "〇" : clueMass.value);
+              }
+
               clueList.push({
                 type: ClueType.ACROSS,
                 typeName: ClueTypeName.ACROSS,
                 clueNo: pzlMass.clueNo,
-                text: this.clue.across[pzlMass.clueNo]
+                question: this.clueListInfo[ClueType.ACROSS][pzlMass.clueNo],
+                answer: clueAns
               });
             }
 
             // タテのカギが存在する場合
-            if(pzlMass.downClueNo === pzlMass.clueNo){
+            if(pzlMass.typeClueNo[ClueType.DOWN] === pzlMass.clueNo){
+              // カギの回答取得
+              let clueAns = "";
+              for(let clueRowNo = rowNo; clueRowNo < this.puzzle.length; clueRowNo++){
+                let clueMass = this.puzzle[clueRowNo][colNo];
+
+                // confirm("down[" + clueRowNo + "][" + colNo + "]" + "\r\n" + JSON.stringify(clueMass));
+
+                if(clueMass.type == MassType.FILLED){
+                  break;
+                }
+
+                clueAns += (this.isEmpty(clueMass.value) ? "〇" : clueMass.value);
+              }
+
               clueList.push({
                 type: ClueType.DOWN,
                 typeName: ClueTypeName.DOWN,
                 clueNo: pzlMass.clueNo,
-                text: this.clue.across[pzlMass.clueNo]
+                question: this.clueListInfo[ClueType.DOWN][pzlMass.clueNo],
+                answer: clueAns
               });
             }
 
@@ -689,14 +950,18 @@ new Vue({
       
       let actMass = this.puzzle[this.activeMass.rowNo][this.activeMass.colNo];
 
-      if(this.activeMass.isAcrossSts){
-        if(clueType == ClueType.ACROSS && clueNo == actMass.acrossClueNo){
-          clsAttrList.push("active-clue");
-        }
-      } else {
-        if(clueType == ClueType.DOWN && clueNo == actMass.downClueNo){
-          clsAttrList.push("active-clue");
-        }
+      switch (this.activeMass.clueType) {
+        case ClueType.ACROSS:
+          if(clueType == ClueType.ACROSS && clueNo == actMass.typeClueNo[ClueType.ACROSS]){
+            clsAttrList.push("active-clue");
+          }
+          break;
+      
+        case ClueType.DOWN:
+          if(clueType == ClueType.DOWN && clueNo == actMass.typeClueNo[ClueType.DOWN]){
+            clsAttrList.push("active-clue");
+          }
+          break;
       }
 
       return clsAttrList;
@@ -705,16 +970,79 @@ new Vue({
     // アクティブカギブロック変更（アクティブマス変更）
     changeActiveClue(clueType, clueNo){
       for(let colNo = 0; colNo < this.puzzle[0].length; colNo++){
-        for(let rowNo = 0; rowNo < this.puzzle.length; rowNo++){
-          
+        for(let rowNo = 0; rowNo < this.puzzle.length; rowNo++){          
           // 新しいアクティブマスを探す
           if(clueNo == this.puzzle[rowNo][colNo].clueNo){
-            this.activeMass = this.getNewActiveMass(rowNo, colNo, clueType == ClueType.ACROSS);
+            this.activeMass = this.getNewActiveMass(rowNo, colNo, clueType);
             return;
           }
         }
       }
 
+    },
+
+    // 解答マス1文字戻る
+    popAnswerMass(){
+      let ansMassList = this.getAnsMassList();
+
+      if(ansMassList.length == 0){
+        return;
+      }
+
+      ansMassList[ansMassList.length - 1].keywordNo = null;
+    },
+
+    // 解答マス全クリア
+    clearAnserMass(){
+      for(let ansMass of this.getAnsMassList()){
+        ansMass.keywordNo = null;
+      }
+    },
+
+    // カギテキストクリア
+    clearClueText(){
+      let actMass = this.getActiveMass();
+      let clueType = this.activeMass.clueType;
+
+      this.clueListInfo[clueType][actMass.typeClueNo[clueType]] = null;
+    },
+
+    // カギテキスト全クリア
+    clearAllClueText(){
+      for(let clueType of Object.keys(this.clueListInfo)){
+        for(let clueNo of Object.keys(this.clueListInfo[clueType])){
+          this.clueListInfo[clueType][clueNo] = null;
+        }
+      }
+    },
+
+    // パズル保存
+    async savePuzzle(){
+      // confirm(JSON.stringify({puzzleId: this.puzzleId, title: this.title, puzzleInfo: this.puzzle, clueListInfo: this.clueListInfo}));
+      this.waitFlg = true;
+
+      try {
+        await this.savePuzzleAsync();
+      } finally {
+        this.waitFlg = false;
+      }
+
+    },
+
+    // パズル保存(非同期処理)
+    async savePuzzleAsync(){
+      return new Promise((resolve, reject) => {
+        google.script.run
+        .withSuccessHandler(puzzleId => {
+          this.puzzleId = puzzleId;
+          confirm("パズルを保存しました。ID:" + this.puzzleId);
+          resolve();
+        }).withFailureHandler(() =>{
+          confirm("パズルの保存に失敗しました。");
+          reject();
+      })
+        .savePuzzle(this.puzzleId, this.title, this.puzzle, this.clueListInfo);
+      });
     }
   }
 });
