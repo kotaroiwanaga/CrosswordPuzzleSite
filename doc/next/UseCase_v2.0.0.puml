@@ -1,0 +1,57 @@
+@startuml クロスワードパズルサイト ユースケース図
+left to right direction
+
+actor パズル作成者 as Creater
+actor パズルプレイヤー as Player
+
+rectangle クロスワードサイト {
+    rectangle 編集ページ {
+        usecase パズル作成 as createPuzzle
+        usecase パズル編集 as editPuzzle
+    }
+
+    rectangle プレイページ {
+        usecase パズルを解く as playPuzzle
+        usecase パズルを評価する as evalPuzzle
+    }
+
+    rectangle "<color:red>ログインページ</color>" #Bisque {
+        usecase "<color:red>既存アカウントでログイン</color>" as loginAsAccount #LightPink
+        usecase "<color:red>ゲストユーザとしてログイン</color>" as loginAsGuest #LightPink
+    }
+
+    rectangle "<color:red>ユーザ登録ページ</color>" #Bisque {
+        usecase "<color:red>ユーザ登録</color>" as regAccount #LightPink
+    }
+
+    rectangle DB操作機能 {
+        usecase パズル情報の取得 as getPuzzle
+        usecase パズル情報の更新 as updatePuzzle
+        usecase パズル評価の登録 as registEval
+        usecase "<color:red>ゲームプレイ状況の更新</color>" as updateGameSts #LightPink
+        usecase "<color:red>ゲームプレイ状況の取得</color>" as getGameSts #LightPink
+    }
+}
+
+Creater -down-> createPuzzle
+Creater -down-> editPuzzle
+Creater -down-> loginAsAccount #Red
+Creater -down-> loginAsGuest #Red
+Creater -down-> regAccount #Red
+
+Player -up-> evalPuzzle
+Player -up-> playPuzzle
+Player -up-> loginAsAccount #Red
+Player -up-> loginAsGuest #Red
+Player -up-> regAccount #Red
+
+createPuzzle -down-> updatePuzzle
+getPuzzle -up-> editPuzzle
+editPuzzle -down-> updatePuzzle
+getPuzzle -down-> playPuzzle
+evalPuzzle -up-> registEval
+playPuzzle -up-> updateGameSts #Red
+getGameSts -down-> playPuzzle #Red
+regAccount -left-> loginAsAccount #Red
+
+@enduml

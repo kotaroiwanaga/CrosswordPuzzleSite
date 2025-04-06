@@ -1,0 +1,37 @@
+@startuml クロスワードパズルサイト ユースケース図
+left to right direction
+
+actor パズル作成者 as Creater
+actor パズルプレイヤー as Player
+
+rectangle クロスワードサイト {
+    rectangle 編集ページ {
+        usecase パズル作成 as createPuzzle
+        usecase パズル編集 as editPuzzle
+    }
+
+    rectangle プレイページ {
+        usecase パズルを解く as playPuzzle
+        usecase "<color:red>パズルを評価する</color>" as evalPuzzle #LightPink
+    }
+
+    rectangle DB操作機能 {
+        usecase パズル情報の取得 as getPuzzle
+        usecase パズル情報の更新 as updatePuzzle
+        usecase "<color:red>パズル評価の登録</color>" as registEval #LightPink
+    }
+}
+
+Creater -down-> createPuzzle
+Creater -down-> editPuzzle
+
+Player -up-> evalPuzzle #Red
+Player -up-> playPuzzle
+
+createPuzzle -down-> updatePuzzle
+getPuzzle -up-> editPuzzle
+editPuzzle -down-> updatePuzzle
+getPuzzle -down-> playPuzzle
+evalPuzzle -up-> registEval #Red
+
+@enduml
